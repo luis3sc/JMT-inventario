@@ -3,7 +3,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { INVENTORY } from './constants';
 import { Billboard, FilterState, INITIAL_FILTERS } from './types';
 import FilterSidebar from './components/FilterSidebar';
-import { FilterIcon, MapIcon, SparklesIcon } from './components/Icons';
+import { FilterIcon, MapIcon, SparklesIcon, EyeIcon, XMarkIcon } from './components/Icons';
 import { analyzeInventory } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedBillboard, setSelectedBillboard] = useState<Billboard | null>(null);
 
   // Logic to filter data
   const filteredData = useMemo(() => {
@@ -134,7 +135,7 @@ const App: React.FC = () => {
             <table className="w-full text-left text-sm text-gray-600">
               <thead className="bg-gray-50/50 text-xs uppercase font-semibold text-gray-500 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 whitespace-nowrap w-16 text-center">Mapa</th>
+                  <th className="px-6 py-4 whitespace-nowrap w-16 text-center">Acciones</th>
                   <th className="px-6 py-4 whitespace-nowrap">Código</th>
                   <th className="px-6 py-4 whitespace-nowrap">Elemento / Formato</th>
                   <th className="px-6 py-4 whitespace-nowrap">Ubicación</th>
@@ -150,21 +151,13 @@ const App: React.FC = () => {
                   filteredData.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
                       <td className="px-6 py-4 text-center">
-                        {item.latitud && item.longitud && (item.latitud !== 0 || item.longitud !== 0) ? (
-                            <a 
-                            href={`https://www.google.com/maps/search/?api=1&query=${item.latitud},${item.longitud}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm hover:shadow-md"
-                            title="Ver ubicación en Google Maps"
-                            >
-                            <MapIcon />
-                            </a>
-                        ) : (
-                            <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-50 text-gray-300 cursor-not-allowed">
-                                <MapIcon />
-                            </span>
-                        )}
+                         <button 
+                            onClick={() => setSelectedBillboard(item)}
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white border border-gray-200 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+                            title="Ver detalles e imagen"
+                          >
+                            <EyeIcon />
+                          </button>
                       </td>
                       <td className="px-6 py-4 font-semibold text-slate-900">{item.codigo}</td>
                       <td className="px-6 py-4">
@@ -245,6 +238,110 @@ const App: React.FC = () => {
         onApply={handleApplyFilters}
         currentFilters={filters}
       />
+
+      {/* Detail Modal */}
+      {selectedBillboard && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedBillboard(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row animate-fade-in" onClick={e => e.stopPropagation()}>
+            
+            {/* Image Section */}
+            <div className="w-full md:w-1/2 bg-gray-100 flex items-center justify-center relative h-64 md:h-auto">
+               {selectedBillboard.urlImagen ? (
+                  <img 
+                    src={selectedBillboard.urlImagen} 
+                    alt={selectedBillboard.codigo}
+                    className="w-full h-full object-cover md:object-contain"
+                  />
+               ) : (
+                  <div className="flex flex-col items-center text-gray-400">
+                     <span className="text-6xl">📷</span>
+                     <span className="mt-2 text-sm">Sin imagen disponible</span>
+                  </div>
+               )}
+               <div className="absolute top-4 left-4">
+                  <span className="bg-black bg-opacity-60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md">
+                    {selectedBillboard.codigo}
+                  </span>
+               </div>
+            </div>
+
+            {/* Details Section */}
+            <div className="w-full md:w-1/2 flex flex-col h-full max-h-[60vh] md:max-h-auto overflow-y-auto">
+               <div className="p-6 md:p-8 space-y-6">
+                  <div className="flex justify-between items-start">
+                     <div>
+                       <h2 className="text-2xl font-bold text-slate-900 leading-tight">{selectedBillboard.elemento}</h2>
+                       <p className="text-indigo-600 font-medium mt-1">{selectedBillboard.tipo}</p>
+                     </div>
+                     <button 
+                       onClick={() => setSelectedBillboard(null)}
+                       className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
+                     >
+                       <XMarkIcon />
+                     </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-6">
+                     <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Formato</label>
+                        <p className="text-slate-800 font-medium">{selectedBillboard.formato || '-'}</p>
+                     </div>
+                     <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Medida</label>
+                        <p className="text-slate-800 font-medium">{selectedBillboard.medida} m</p>
+                     </div>
+                     <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Audiencia</label>
+                        <p className="text-slate-800 font-medium">{selectedBillboard.audiencia.toLocaleString()}</p>
+                     </div>
+                     <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Zona</label>
+                        <p className="text-slate-800 font-medium">{selectedBillboard.zona}</p>
+                     </div>
+                  </div>
+
+                  <div>
+                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ubicación Comercial</label>
+                     <p className="text-slate-800">{selectedBillboard.direccionComercial}</p>
+                  </div>
+
+                  <div>
+                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ubicación Legal</label>
+                     <p className="text-slate-600 text-sm">{selectedBillboard.direccionLegal}</p>
+                     <p className="text-slate-500 text-xs mt-1">{selectedBillboard.distrito}, {selectedBillboard.departamento}</p>
+                  </div>
+
+                  {selectedBillboard.observacion && (
+                     <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
+                        <label className="block text-xs font-bold text-amber-800 uppercase tracking-wider mb-1">Observación</label>
+                        <p className="text-amber-900 text-sm">{selectedBillboard.observacion}</p>
+                     </div>
+                  )}
+
+                  <div className="pt-4">
+                     {selectedBillboard.latitud && selectedBillboard.longitud && (selectedBillboard.latitud !== 0 || selectedBillboard.longitud !== 0) ? (
+                         <a 
+                           href={`https://www.google.com/maps/search/?api=1&query=${selectedBillboard.latitud},${selectedBillboard.longitud}`}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="flex items-center justify-center w-full py-3 px-4 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-lg shadow-slate-200 gap-2"
+                         >
+                           <MapIcon />
+                           <span>Ver ubicación en Google Maps</span>
+                         </a>
+                     ) : (
+                        <button disabled className="flex items-center justify-center w-full py-3 px-4 bg-gray-100 text-gray-400 rounded-xl cursor-not-allowed font-medium">
+                           <MapIcon />
+                           <span>Sin ubicación disponible</span>
+                        </button>
+                     )}
+                  </div>
+               </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

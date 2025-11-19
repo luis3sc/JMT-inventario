@@ -18,6 +18,7 @@ export interface Billboard {
   latitud: number;
   longitud: number;
   observacion: string;
+  urlImagen: string;
 }
 
 export interface FilterState {
